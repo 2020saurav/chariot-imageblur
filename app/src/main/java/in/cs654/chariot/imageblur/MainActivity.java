@@ -9,15 +9,18 @@ import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import in.cs654.chariot.avro.BasicRequest;
 import in.cs654.chariot.avro.BasicResponse;
@@ -58,20 +61,32 @@ public class MainActivity extends AppCompatActivity {
         process.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                TextView textView = (TextView) findViewById(R.id.textView);
-                textView.setText("Waiting...");
+//                TextView textView = (TextView) findViewById(R.id.textView);
+//                textView.setText("Waiting...");
                 try {
                     // TODO correct it to call blur function (after DB and device setup)
-                    PrashtiClient client = new PrashtiClient("172.24.1.62");
-                    BasicRequest lifeUniv = BasicRequest.newBuilder()
+                    String imgFilePath = dir + count + ".jpg";
+                    Bitmap bitmap = BitmapFactory.decodeFile(imgFilePath);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+                    byte[] bytes = baos.toByteArray();
+                    String encodedImage = Base64.encodeToString(bytes, Base64.DEFAULT);
+                    Map<String, String> map = new HashMap<String, String>();
+                    map.put("imgBytes", encodedImage);
+                    PrashtiClient client = new PrashtiClient();
+                    BasicRequest imgBlurReq = BasicRequest.newBuilder()
                             .setRequestId(CommonUtils.randomString(32))
-                            .setDeviceId("1")
-                            .setFunctionName("testFunc")
+                            .setDeviceId("imgBlurApp")
+                            .setFunctionName("blur")
                             .setArguments(new ArrayList<String>())
-                            .setExtraData(new HashMap<String, String>())
+                            .setExtraData(map)
                             .build();
-                    BasicResponse response = client.call(lifeUniv);
-                    textView.setText(response.getResponse().get("answer"));
+                    BasicResponse response = client.call(imgBlurReq);
+//                    textView.setText(response.getResponse().get("answer"));
+                    byte[] bytes1 = Base64.decode(response.getResponse().get("blurStr"), Base64.DEFAULT);
+                    Bitmap bitmap1 = BitmapFactory.decodeByteArray(bytes1, 0, bytes1.length);
+                    ImageView imageView = (ImageView) findViewById(R.id.imageView);
+                    imageView.setImageBitmap(bitmap1);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
